@@ -1,1 +1,132 @@
+Option Explicit
+
+'=== 選択中のグラフを整える ===
+Public Sub FormatSelectedCharts_Nice()
+    Dim co As ChartObject
+    
+    If TypeName(Selection) = "ChartObject" Then
+        FormatOneChartObject Selection
+    ElseIf TypeName(Selection) = "DrawingObjects" Or TypeName(Selection) = "Object" Then
+        ' 複数選択の可能性があるので、選択中のChartObjectだけ拾う
+        For Each co In ActiveSheet.ChartObjects
+            If co.ShapeRange.Count = 1 Then
+                ' ここは何もしない（単体判定できない）
+            End If
+        Next co
+        
+        ' より確実に：シート上の全グラフを対象（必要ならこちらを使ってください）
+        'For Each co In ActiveSheet.ChartObjects
+        '    FormatOneChartObject co
+        'Next co
+        MsgBox "グラフを選択してから実行してください。（またはコード内の全グラフ対象を有効化してください）", vbExclamation
+    Else
+        MsgBox "グラフを選択してから実行してください。", vbExclamation
+    End If
+End Sub
+
+'=== シート上の全グラフを整える ===
+Public Sub FormatAllChartsOnActiveSheet_Nice()
+    Dim co As ChartObject
+    For Each co In ActiveSheet.ChartObjects
+        FormatOneChartObject co
+    Next co
+End Sub
+
+'=== 実処理 ===
+Private Sub FormatOneChartObject(ByVal co As ChartObject)
+    Dim ch As Chart
+    Set ch = co.Chart
+    
+    '--- サイズ（cm -> point） ---
+    ' 1 inch = 72 pt, 1 inch = 2.54 cm → 1 cm = 72/2.54 pt
+    co.Width = CmToPt(10)
+    co.Height = CmToPt(10)
+    
+    '--- グラフエリア（枠なし、塗りつぶし白） ---
+    With ch.ChartArea.Format
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.RGB = RGB(255, 255, 255)
+        .Line.Visible = msoFalse
+    End With
+    
+    '--- プロットエリア（枠線 黒）＋サイズ 8cm×8cm ---
+    With ch.PlotArea
+        ' 塗りは基本は触らない（必要なら白にしてもOK）
+        .Format.Line.Visible = msoTrue
+        .Format.Line.ForeColor.RGB = RGB(0, 0, 0)
+        .Format.Line.Weight = 1
+        
+        .Width = CmToPt(8)
+        .Height = CmToPt(8)
+        ' 位置は中央寄せ（見た目が崩れにくい）
+        .Left = (ch.ChartArea.Width - .Width) / 2
+        .Top = (ch.ChartArea.Height - .Height) / 2
+    End With
+    
+    '--- 文字（軸数値・軸ラベル）黒 11pt ---
+    ApplyAxisTextStyle ch, xlCategory   ' 横軸
+    ApplyAxisTextStyle ch, xlValue      ' 縦軸
+    
+    '--- 軸線：黒 ---
+    ApplyAxisLineStyle ch, xlCategory, RGB(0, 0, 0)
+    ApplyAxisLineStyle ch, xlValue, RGB(0, 0, 0)
+    
+    '--- 補助目盛線（= 主目盛線 MajorGridlines を灰色に） ---
+    ' 「補助目盛線」を“主目盛線”として解釈してます。
+    ' もし「補助目盛線=MinorGridlines」なら下のコメントを外してください。
+    ApplyGridLineStyle ch, xlCategory, True, RGB(180, 180, 180)
+    ApplyGridLineStyle ch, xlValue, True, RGB(180, 180, 180)
+    
+    'ApplyGridLineStyle ch, xlCategory, False, RGB(180, 180, 180) '←MinorGridlinesにしたい場合
+    'ApplyGridLineStyle ch, xlValue, False, RGB(180, 180, 180)    '←MinorGridlinesにしたい場合
+End Sub
+
+'================= helpers =================
+
+Private Function CmToPt(ByVal cm As Double) As Double
+    CmToPt = cm * 72# / 2.54
+End Function
+
+Private Sub ApplyAxisTextStyle(ByVal ch As Chart, ByVal axisType As XlAxisType)
+    On Error Resume Next
+    With ch.Axes(axisType, xlPrimary).TickLabels.Font
+        .Color = RGB(0, 0, 0)
+        .Size = 11
+    End With
+    
+    With ch.Axes(axisType, xlPrimary).AxisTitle.Font
+        .Color = RGB(0, 0, 0)
+        .Size = 11
+    End With
+    On Error GoTo 0
+End Sub
+
+Private Sub ApplyAxisLineStyle(ByVal ch As Chart, ByVal axisType As XlAxisType, ByVal rgbColor As Long)
+    On Error Resume Next
+    With ch.Axes(axisType, xlPrimary).Format.Line
+        .Visible = msoTrue
+        .ForeColor.RGB = rgbColor
+        .Weight = 1
+    End With
+    On Error GoTo 0
+End Sub
+
+' major=True: MajorGridlines, major=False: MinorGridlines
+Private Sub ApplyGridLineStyle(ByVal ch As Chart, ByVal axisType As XlAxisType, ByVal major As Boolean, ByVal rgbColor As Long)
+    On Error Resume Next
+    If major Then
+        With ch.Axes(axisType, xlPrimary).MajorGridlines.Format.Line
+            .Visible = msoTrue
+            .ForeColor.RGB = rgbColor
+            .Weight = 0.75
+        End With
+    Else
+        With ch.Axes(axisType, xlPrimary).MinorGridlines.Format.Line
+            .Visible = msoTrue
+            .ForeColor.RGB = rgbColor
+            .Weight = 0.75
+        End With
+    End If
+    On Error GoTo 0
+End Sub
 
