@@ -1,0 +1,38 @@
+Option Explicit
+Sub 全てのセルに日本語と英数字で別のフォントを適応_セル高さも指定()
+    Dim ws As Worksheet
+    Dim firstWs As Worksheet
+    Dim firstFlag
+    Dim s
+    On Error Resume Next
+    
+    Application.ScreenUpdating = False
+ 
+    firstFlag = False
+    
+    For Each s In Worksheets
+        
+        Dim nowSheet As Worksheet
+        Set nowSheet = Worksheets(s.Name)
+        
+        ' 最初のシート情報を控えておく
+        If firstFlag = False Then
+            
+            Set firstWs = nowSheet
+            firstFlag = True
+            
+        End If
+        
+        nowSheet.Activate
+            'Cells.Font.Name = "游明朝"
+            'Cells.Font.Name = "Times New Roman"
+            Cells.Font.Name = "メイリオ"
+            Cells.Font.Name = "Arial"
+            'Cells.RowHeight = 20
+    Next
+    
+    ' 最初のシートを選択
+    firstWs.Select
+ 
+    Application.ScreenUpdating = True
+End Sub
