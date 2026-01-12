@@ -1,132 +1,139 @@
 Option Explicit
+Sub FormatSelectedChart()
+    Dim chartObj As ChartObject
+    Dim chart As chart
+    Dim axis As axis
+    Dim plotAreaWidth As Double
+    Dim plotAreaHeight As Double
+    Dim xAxis As axis
+    Dim yAxis As axis
 
-'=== 選択中のグラフを整える ===
-Public Sub FormatSelectedCharts_Nice()
-    Dim co As ChartObject
+    ' 現在選択されているオブジェクトがチャートであるか確認
+    If TypeName(Selection) <> "ChartArea" Then
+        MsgBox "グラフが選択されていません。"
+        Exit Sub
+    End If
+
+    ' 選択されているチャートを取得
+    Set chartObj = ActiveChart.Parent
+    'chartObj.Placement = xlMove 'セルに合わせて移動はするが、サイズ変更はしない
+    Set chart = chartObj.chart
+
+    ' y軸の設定
+    With chart.Axes(xlValue)
+        .TickLabels.Font.Name = "Arial"
+        .TickLabels.Font.Size = 16 ' 軸の数値のフォントサイズを16に設定
+        .TickLabels.Font.Bold = True ' 軸の数値を太文字に設定
+        .TickLabels.Font.Color = RGB(0, 0, 0) ' フォントの色を黒に
+        .Format.Line.Weight = 2 ' グラフプロットエリアの線の太さを設定
+        .Format.Line.ForeColor.RGB = RGB(0, 0, 0) ' y軸の線の色を黒に設定
+    End With
+    ' y軸のラベルの余白を設定
+    'Set yAxis = chart.Axes(xlValue, xlPrimary)
+    'yAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginBottom = 0
+    'yAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginLeft = 0
+    'yAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginRight = 0
+    'yAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginTop = 0
+
+    ' x軸の設定
+    With chart.Axes(xlCategory)
+        .TickLabels.Font.Name = "Arial"
+        .TickLabels.Font.Size = 16 ' 軸の数値のフォントサイズを16に設定
+        .TickLabels.Font.Bold = True ' 軸の数値を太文字に設定
+        .TickLabels.Font.Color = RGB(0, 0, 0) ' フォントの色を黒に
+        .Format.Line.Weight = 2 ' グラフプロットエリアの線の太さを設定
+        .Format.Line.ForeColor.RGB = RGB(0, 0, 0) ' x軸の線の色を黒に設定
+    End With
+    ' x軸のラベルの余白を設定
+    'Set xAxis = chart.Axes(xlCategory, xlPrimary)
+    'xAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginBottom = 0
+    'xAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginLeft = 0
+    'xAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginRight = 0
+    'xAxis.TickLabels.Format.TextFrame2.TextRange.ParagraphFormat.MarginTop = 0
+
     
-    If TypeName(Selection) = "ChartObject" Then
-        FormatOneChartObject Selection
-    ElseIf TypeName(Selection) = "DrawingObjects" Or TypeName(Selection) = "Object" Then
-        ' 複数選択の可能性があるので、選択中のChartObjectだけ拾う
-        For Each co In ActiveSheet.ChartObjects
-            If co.ShapeRange.Count = 1 Then
-                ' ここは何もしない（単体判定できない）
+    With chart.PlotArea.Format.Line
+        .Weight = 2 '線の太さを設定
+        .ForeColor.RGB = RGB(0, 0, 0) '色を黒に設定
+    End With
+
+    ' チャートエリアのサイズを設定
+    chartObj.Width = Application.CentimetersToPoints(15) '図全体のサイズ
+    chartObj.Height = Application.CentimetersToPoints(15)
+
+    ' プロットエリアのサイズを計算
+    plotAreaWidth = Application.CentimetersToPoints(10) ' 軸を含まないプロットエリアサイズ
+    plotAreaHeight = Application.CentimetersToPoints(10)
+    
+    ' プロットエリアの位置とサイズを設定
+    With chart.PlotArea
+        .Left = 0 'サイズ変更のために一時的に動かす．
+        .Top = 0 'サイズ変更のために一時的に動かす．
+        .Width = plotAreaWidth - .InsideWidth + .Width
+        .Height = plotAreaHeight - .InsideHeight + .Height
+        .Left = Application.CentimetersToPoints(1) '位置だがApplication.CentimetersToPoints(1)としても良いかも
+        .Top = chartObj.Height - Application.CentimetersToPoints(1) - .Height '位置だがApplication.CentimetersToPoints(1)としても良いかも
+    End With
+
+    ' X軸タイトルのフォントサイズを変更し、他の書式を保持
+    ChangeAxisTitleFontSize chart.Axes(xlCategory, xlPrimary).axisTitle
+    ' X軸タイトルの位置を調整
+    With chart.Axes(xlCategory, xlPrimary).axisTitle
+        .Left = (chart.PlotArea.InsideLeft) + chart.PlotArea.InsideWidth / 2 - .Width / 2
+        .Top = chartObj.Height
+    End With
+    
+    ' Y軸タイトルのフォントサイズを変更し、他の書式を保持
+    ChangeAxisTitleFontSize chart.Axes(xlValue, xlPrimary).axisTitle
+    ' Y軸タイトルの位置を調整
+    With chart.Axes(xlValue, xlPrimary).axisTitle
+        .Left = -5
+        .Top = (chart.PlotArea.InsideTop) + chart.PlotArea.InsideHeight / 2 - .Height / 2
+    End With
+    
+    ' 凡例が現在ない場合に追加
+    If chart.HasLegend = True Then
+        chart.HasLegend = False
+    End If
+    
+    ' 凡例を追加してフォントを設定
+'    With chart.Legend
+'        .Font.Name = "メイリオ"
+'        '.Font.Name = "Arial"
+'        .Font.Size = 12
+'        .Font.Color = RGB(0, 0, 0) ' フォントの色を黒に設定
+'        .Font.Bold = True ' フォントを太文字に設定
+'        '.Legend.Width = Application.CentimetersToPoints(7)
+'        '.Legend.Width = Application.CentimetersToPoints(7)
+'        .Top = -5 ' チャートエリアの上部に配置
+'        .Left = chartObj.Width ' チャートエリアの右端に配置
+'    End With
+
+End Sub
+Sub ChangeAxisTitleFontSize(axisTitle As axisTitle)
+    Dim i As Long
+    Dim charRange As TextRange2
+
+    ' 現在の書式設定を取得し、フォントサイズと色を変更
+    Set charRange = axisTitle.Format.TextFrame2.TextRange
+    For i = 1 To charRange.Characters.Count
+        With charRange.Characters(i, 1).Font
+            ' フォントサイズ、色、太字の変更
+            .Size = 20 ' フォントサイズを変更
+            .Fill.ForeColor.RGB = RGB(0, 0, 0) 'フォントの色を黒に
+            .Bold = True ' 太文字を適用
+            .Name = "メイリオ"
+            .Name = "Arial"
+
+            ' 下付き文字や上付き文字の設定
+            If .Subscript = msoTrue Then
+                .Subscript = msoTrue
+            ElseIf .Superscript = msoTrue Then
+                .Superscript = msoTrue
+            Else
+                .Subscript = msoFalse
+                .Superscript = msoFalse
             End If
-        Next co
-        
-        ' より確実に：シート上の全グラフを対象（必要ならこちらを使ってください）
-        'For Each co In ActiveSheet.ChartObjects
-        '    FormatOneChartObject co
-        'Next co
-        MsgBox "グラフを選択してから実行してください。（またはコード内の全グラフ対象を有効化してください）", vbExclamation
-    Else
-        MsgBox "グラフを選択してから実行してください。", vbExclamation
-    End If
-End Sub
-
-'=== シート上の全グラフを整える ===
-Public Sub FormatAllChartsOnActiveSheet_Nice()
-    Dim co As ChartObject
-    For Each co In ActiveSheet.ChartObjects
-        FormatOneChartObject co
-    Next co
-End Sub
-
-'=== 実処理 ===
-Private Sub FormatOneChartObject(ByVal co As ChartObject)
-    Dim ch As Chart
-    Set ch = co.Chart
-    
-    '--- サイズ（cm -> point） ---
-    ' 1 inch = 72 pt, 1 inch = 2.54 cm → 1 cm = 72/2.54 pt
-    co.Width = CmToPt(10)
-    co.Height = CmToPt(10)
-    
-    '--- グラフエリア（枠なし、塗りつぶし白） ---
-    With ch.ChartArea.Format
-        .Fill.Visible = msoTrue
-        .Fill.ForeColor.RGB = RGB(255, 255, 255)
-        .Line.Visible = msoFalse
-    End With
-    
-    '--- プロットエリア（枠線 黒）＋サイズ 8cm×8cm ---
-    With ch.PlotArea
-        ' 塗りは基本は触らない（必要なら白にしてもOK）
-        .Format.Line.Visible = msoTrue
-        .Format.Line.ForeColor.RGB = RGB(0, 0, 0)
-        .Format.Line.Weight = 1
-        
-        .Width = CmToPt(8)
-        .Height = CmToPt(8)
-        ' 位置は中央寄せ（見た目が崩れにくい）
-        .Left = (ch.ChartArea.Width - .Width) / 2
-        .Top = (ch.ChartArea.Height - .Height) / 2
-    End With
-    
-    '--- 文字（軸数値・軸ラベル）黒 11pt ---
-    ApplyAxisTextStyle ch, xlCategory   ' 横軸
-    ApplyAxisTextStyle ch, xlValue      ' 縦軸
-    
-    '--- 軸線：黒 ---
-    ApplyAxisLineStyle ch, xlCategory, RGB(0, 0, 0)
-    ApplyAxisLineStyle ch, xlValue, RGB(0, 0, 0)
-    
-    '--- 補助目盛線（= 主目盛線 MajorGridlines を灰色に） ---
-    ' 「補助目盛線」を“主目盛線”として解釈してます。
-    ' もし「補助目盛線=MinorGridlines」なら下のコメントを外してください。
-    ApplyGridLineStyle ch, xlCategory, True, RGB(180, 180, 180)
-    ApplyGridLineStyle ch, xlValue, True, RGB(180, 180, 180)
-    
-    'ApplyGridLineStyle ch, xlCategory, False, RGB(180, 180, 180) '←MinorGridlinesにしたい場合
-    'ApplyGridLineStyle ch, xlValue, False, RGB(180, 180, 180)    '←MinorGridlinesにしたい場合
-End Sub
-
-'================= helpers =================
-
-Private Function CmToPt(ByVal cm As Double) As Double
-    CmToPt = cm * 72# / 2.54
-End Function
-
-Private Sub ApplyAxisTextStyle(ByVal ch As Chart, ByVal axisType As XlAxisType)
-    On Error Resume Next
-    With ch.Axes(axisType, xlPrimary).TickLabels.Font
-        .Color = RGB(0, 0, 0)
-        .Size = 11
-    End With
-    
-    With ch.Axes(axisType, xlPrimary).AxisTitle.Font
-        .Color = RGB(0, 0, 0)
-        .Size = 11
-    End With
-    On Error GoTo 0
-End Sub
-
-Private Sub ApplyAxisLineStyle(ByVal ch As Chart, ByVal axisType As XlAxisType, ByVal rgbColor As Long)
-    On Error Resume Next
-    With ch.Axes(axisType, xlPrimary).Format.Line
-        .Visible = msoTrue
-        .ForeColor.RGB = rgbColor
-        .Weight = 1
-    End With
-    On Error GoTo 0
-End Sub
-
-' major=True: MajorGridlines, major=False: MinorGridlines
-Private Sub ApplyGridLineStyle(ByVal ch As Chart, ByVal axisType As XlAxisType, ByVal major As Boolean, ByVal rgbColor As Long)
-    On Error Resume Next
-    If major Then
-        With ch.Axes(axisType, xlPrimary).MajorGridlines.Format.Line
-            .Visible = msoTrue
-            .ForeColor.RGB = rgbColor
-            .Weight = 0.75
         End With
-    Else
-        With ch.Axes(axisType, xlPrimary).MinorGridlines.Format.Line
-            .Visible = msoTrue
-            .ForeColor.RGB = rgbColor
-            .Weight = 0.75
-        End With
-    End If
-    On Error GoTo 0
+    Next i
 End Sub
-
