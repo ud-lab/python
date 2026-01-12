@@ -1,0 +1,55 @@
+Option Explicit
+Sub シートを整える_A1移動と任意の拡大率()
+    Dim ws As Worksheet
+    Dim firstWs As Worksheet
+    Dim firstFlag As Boolean
+    Dim s As Worksheet
+    Dim zoomLevel As Variant
+    
+    On Error Resume Next
+    Application.ScreenUpdating = False
+    
+    ' 拡大率の入力を求める
+    zoomLevel = InputBox("シートの拡大率を入力してください (10～400):", "拡大率設定", 100)
+    
+    ' 入力値のチェック
+    If Not IsNumeric(zoomLevel) Or zoomLevel < 10 Or zoomLevel > 400 Then
+        MsgBox "正しい拡大率 (10～400) を入力してください。", vbExclamation
+        Exit Sub
+    End If
+    
+    firstFlag = False
+    
+    ' 各シートに対して処理を実行
+    For Each s In Worksheets
+        Dim nowSheet As Worksheet
+        Set nowSheet = s
+        
+        ' 最初のシートを記憶
+        If firstFlag = False Then
+            Set firstWs = nowSheet
+            firstFlag = True
+        End If
+        
+        ' 現在のシートを処理
+        nowSheet.Activate
+        
+        ' 横スクロールを一番左
+        ActiveWindow.ScrollColumn = 1
+        
+        ' 縦スクロールを一番上
+        ActiveWindow.ScrollRow = 1
+        
+        ' 拡大率を設定
+        ActiveWindow.Zoom = zoomLevel
+        
+        ' A1セルを選択
+        nowSheet.Range("A1").Select
+    Next
+    
+    ' 最初のシートを選択
+    firstWs.Select
+    
+    Application.ScreenUpdating = True
+End Sub
+
