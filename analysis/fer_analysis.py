@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 # =======================
 TARGET_FOLDER = r"C:\data\excel_files"   # ★解析したいフォルダ
 RECURSIVE = True                         # サブフォルダも含める
-START_ROW = 46                           # データ開始行（1始まり）
+START_ROW = 43                           # データ開始行（1始まり）
 USE_SHEET = None                         # Noneで先頭シート / "Sheet1" のように指定も可
 
-# 列：E=搬送長, F=目的値, G=測定位置(mm)
-USECOLS = "E:G"
+# 列：D=搬送長, E=目的値, F=測定位置(mm), G
+USECOLS = "D:G"
 
 # position(mm) の丸め刻み（Noneなら自動推定）
 # 例：0.5, 0.1, 0.01 など
