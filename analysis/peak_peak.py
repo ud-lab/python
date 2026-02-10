@@ -9,7 +9,7 @@ from openpyxl import Workbook
 
 # 生データが格納されているフォルダのパスを指定してください
 input_folder = '生データ/QiT_T1'
-output_excel = 'CHARIoT解析_QiT_T1_5mmPMax⊿Re.xlsx'
+output_excel = 'CHARIoT解析_QiT_T1_5mmPMax⊿Re(TD slope).xlsx'
 
 # 平滑化のパラメータ
 window_length = 8  # 平滑化のウィンドウサイズ（奇数）
@@ -17,14 +17,14 @@ polyorder = 2      # 平滑化の多項式の次数
 
 # ピークと谷を検出するためのパラメータ
 peak_distance = 3  # ピーク間の最小距離（データポイント数）5スタンダード
-peak_prominence = 0.03  # ピークの目立ち具合（プロミネンス）0.08
+peak_prominence = 0.05  # ピークの目立ち具合（プロミネンス）0.08
 
 # TD方向の範囲
 td_min = 120
 td_max = 250
 
 # ピーク幅の最大閾値（この幅以下のピークを対象にする）
-max_width_threshold = 8  # 8mmスタンダード
+max_width_threshold = 5  # 8mmスタンダード
 
 # Excelファイルを作成
 wb = Workbook()
@@ -76,7 +76,9 @@ for file_name in os.listdir(input_folder):
         wave_heights = []
         wave_pitches = []
         peak_widths = []
+        peak_slopes = []
         filtered_peak_heights = []  # 幅が閾値以下のピークの高さを格納するリスト
+        filtered_peak_slopes = []
         for i in range(len(peaks)):
             peak_idx = peaks[i]
             
@@ -94,21 +96,24 @@ for file_name in os.listdir(input_folder):
                 wave_pitches.append(wave_pitch)
                 peak_width = x_values[next_trough_idx[0]] - x_values[prev_trough_idx[-1]]
                 peak_widths.append(peak_width)
+                peak_slope = np.abs(wave_height / peak_width)
+                peak_slopes.append(peak_slope)
                 
                 # 幅が閾値以下の場合、ピークの高さを記録
                 if peak_width <= max_width_threshold:
                     filtered_peak_heights.append(wave_height)
+                    filtered_peak_slopes.append(peak_slope)
         
         # 幅が閾値以下のピークの高さの平均を計算
         #average_filtered_peak_height = np.mean(filtered_peak_heights) if filtered_peak_heights else 0
-        max_filtered_peak_height = np.amax(filtered_peak_heights) if filtered_peak_heights else 0
-        # 平均値をまとめるリストに追加
-        summary_data.append([file_name, max_filtered_peak_height])
+        max_filtered_peak_slope = np.amax(filtered_peak_slopes) if filtered_peak_slopes else 0
+        # 最大値をまとめるリストに追加
+        summary_data.append([file_name, max_filtered_peak_slope])
         
         # 結果をExcelに書き込む
         sheet_title = file_name[:10]  # タイトルをファイル名の最初10文字に設定
         sheet = wb.create_sheet(title=sheet_title)
-        sheet.append(['TD Position [mm]', 'Peak Intensity', 'Position [mm]', 'Trough Intensity', 'Pitch (mm)', 'Height', 'Width'])
+        sheet.append(['TD Position [mm]', 'Peak Intensity', 'Position [mm]', 'Trough Intensity', 'Pitch (mm)', 'Height', 'Width', 'Slope'])
         for i in range(len(peaks)):
             peak_pos = peak_positions[i] if i < len(peak_positions) else None
             peak_int = peak_intensities[i] if i < len(peak_intensities) else None
@@ -117,10 +122,11 @@ for file_name in os.listdir(input_folder):
             pitch = wave_pitches[i] if i < len(wave_pitches) else None
             height = wave_heights[i] if i < len(wave_heights) else None
             width = peak_widths[i] if i < len(peak_widths) else None
-            sheet.append([peak_pos, peak_int, trough_pos, trough_int, pitch, height, width])
+            slope = peak_slopes[i] if i < len(peak_slopes) else None
+            sheet.append([peak_pos, peak_int, trough_pos, trough_int, pitch, height, width, slope])
         
         sheet.append([])
-        sheet.append(['Max Height of Peaks with Width <= Threshold', max_filtered_peak_height])
+        sheet.append(['Max Slope of Peaks with Width <= Threshold', max_filtered_peak_slope])
         
         # ピーク幅の分布をプロット
         plt.figure(figsize=(10, 6))
@@ -147,7 +153,7 @@ for file_name in os.listdir(input_folder):
 
 # 新しいシートにまとめを記録
 summary_sheet = wb.create_sheet(title="Summary")
-summary_sheet.append(['File Name', 'Max Height of Peaks with Width <= Threshold'])
+summary_sheet.append(['File Name', 'Max Slope of Peaks with Width <= Threshold'])
 for row in summary_data:
     summary_sheet.append(row)
 
